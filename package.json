@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "puppeteer": "^22.5.0"
+  },
+  "name": "automation-responses-vacancies-linkedin",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "vvitulskyi",
+  "license": "ISC",
+  "description": ""
+}
