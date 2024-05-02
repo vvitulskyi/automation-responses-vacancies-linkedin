@@ -21,6 +21,7 @@ const myKeyWords = [
   "Type Script",
   "Type-Script",
   ".ts",
+  "web"
 ];
 
 module.exports = myKeyWords;

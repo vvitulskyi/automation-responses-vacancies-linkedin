@@ -1,6 +1,8 @@
+require("dotenv").config();
 const puppeteer = require("puppeteer");
 const myKeyWords = require("./myKeyWords.js");
-require('dotenv').config()
+const stopWordsInTitle = require("./stopWordsInTitle.js");
+const allowedStates = require("./allowedStates.js");
 
 class LinkedinJobSearcher {
   constructor() {
@@ -8,9 +10,10 @@ class LinkedinJobSearcher {
     this.page = null;
     this.success = [];
     // Link to go to the search page
-    this.searchUrl = "https://www.linkedin.com/jobs/collections/easy-apply/?currentJobId=3842174139&discover=recommended&discoveryOrigin=JOBS_HOME_JYMBII";
+    this.searchUrl =
+      "https://www.linkedin.com/jobs/collections/recommended/?discover=recommended&discoveryOrigin=JOBS_HOME_JYMBII";
     // Time to fill out the form
-    this.applyingTimeout = 600_000;
+    this.applyingTimeout = 1_000;
     this.screenshotCounter = 0;
   }
 
@@ -26,6 +29,7 @@ class LinkedinJobSearcher {
     await this.#visitSearchPage();
     await this.#scrollJobsList();
     await this.#findingSulitableVacancies();
+    await this.browser.close();
     console.log(this.success);
     console.log(this.success.length);
   }
@@ -125,6 +129,27 @@ class LinkedinJobSearcher {
       if (!keyWordIncludes) {
         continue;
       }
+
+      const stopWordIncludes = stopWordsInTitle.some((r) =>
+        title.toLowerCase().includes(r.toLowerCase())
+      );
+      if (stopWordIncludes) {
+        continue;
+      }
+
+      const description = await this.page.evaluate(
+        (e) => e.textContent.replace("\n", "").trim(),
+        await this.page.$(
+          ".job-details-jobs-unified-top-card__primary-description-without-tagline"
+        )
+      );
+      const allowedStatesIncludes = allowedStates.some((r) =>
+        description.toLowerCase().includes(r.toLowerCase())
+      );
+      if (!allowedStatesIncludes) {
+        continue;
+      }
+
       const successModal = await this.page.$(
         ".artdeco-modal.artdeco-modal--layer-default h2#post-apply-modal"
       );
@@ -172,6 +197,7 @@ class LinkedinJobSearcher {
           await this.#onClick(
             `.artdeco-modal.artdeco-modal--layer-default .ember-view.artdeco-modal__dismiss`
           );
+          await new Promise((resolve) => setTimeout(resolve, 500));
           await this.#onClick(
             `.artdeco-button--secondary.artdeco-modal__confirm-dialog-btn`
           );
@@ -180,13 +206,6 @@ class LinkedinJobSearcher {
         }
         continue;
       }
-
-      const description = await this.page.evaluate(
-        (e) => e.textContent.replace('\n', '').trim(),
-        await this.page.$(
-          ".job-details-jobs-unified-top-card__primary-description-without-tagline"
-        )
-      );
 
       // Get the company name
       const companySelector = await this.page.$(
@@ -207,7 +226,7 @@ class LinkedinJobSearcher {
       this.success.push({
         title,
         companyName,
-        description
+        description,
       });
       console.log(this.success);
       // Close the modal
