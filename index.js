@@ -9,16 +9,24 @@ class LinkedinJobSearcher {
     this.browser = null;
     this.page = null;
     this.success = [];
-    // Link to go to the search page
-    this.searchUrl =
-      "https://www.linkedin.com/jobs/collections/recommended/?discover=recommended&discoveryOrigin=JOBS_HOME_JYMBII";
+    // Links to go to the search page
+    this.searchUrls = [
+      "https://www.linkedin.com/jobs/collections/easy-apply/?currentJobId=3828084624&discover=recommended&discoveryOrigin=JOBS_HOME_JYMBII",
+      "https://www.linkedin.com/jobs/collections/recommended/?currentJobId=3918406757&discover=recommended&discoveryOrigin=JOBS_HOME_JYMBII",
+      "https://www.linkedin.com/jobs/collections/top-applicant/?currentJobId=3921039339",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3917578165&distance=25&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Frontend%20Developer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3917543403&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=React%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_KEYWORD_AUTOCOMPLETE&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3917578165&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Javascript%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3919738664&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Javascript&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3918221427&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Frontend&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD"
+    ]
     // Time to fill out the form
     this.applyingTimeout = 1_000;
     this.screenshotCounter = 0;
   }
 
   async init() {
-    this.browser = await puppeteer.launch({ headless: false });
+    this.browser = await puppeteer.launch({ headless: true });
     this.page = (await this.browser.pages())[0];
     await this.page.setViewport({ width: 1000, height: 650 });
     await this.#run();
@@ -26,9 +34,7 @@ class LinkedinJobSearcher {
 
   async #run() {
     await this.#login();
-    await this.#visitSearchPage();
-    await this.#scrollJobsList();
-    await this.#findingSulitableVacancies();
+    await this.#mapSearchUrls();
     await this.browser.close();
     console.log(this.success);
     console.log(this.success.length);
@@ -44,6 +50,14 @@ class LinkedinJobSearcher {
       `.login__form .btn__primary--large.from__button--floating`
     );
     await this.page.waitForNavigation({ waitUntil: "load" });
+  }
+
+  async #mapSearchUrls() {
+    for (let i = 0; i < this.searchUrls.length; i++) {
+      await this.#visitSearchPage(this.searchUrls[i]);
+      await this.#scrollJobsList();
+      await this.#findingSulitableVacancies();
+    }
   }
 
   async #onClick(selector) {
@@ -67,8 +81,8 @@ class LinkedinJobSearcher {
     );
   }
 
-  async #visitSearchPage() {
-    await this.page.goto(this.searchUrl);
+  async #visitSearchPage(searchUrl) {
+    await this.page.goto(searchUrl);
   }
 
   async #scrollJobsList() {
@@ -140,7 +154,7 @@ class LinkedinJobSearcher {
       const description = await this.page.evaluate(
         (e) => e.textContent.replace("\n", "").trim(),
         await this.page.$(
-          ".job-details-jobs-unified-top-card__primary-description-without-tagline"
+          ".job-details-jobs-unified-top-card__tertiary-description"
         )
       );
       const allowedStatesIncludes = allowedStates.some((r) =>
@@ -179,9 +193,20 @@ class LinkedinJobSearcher {
 
       // Go through the pre-filled form as much as possible
       const modal = ".jobs-easy-apply-modal";
-      await this.page.waitForSelector(`${modal} .jobs-easy-apply-content`, {
-        visible: true,
-      });
+      try {
+        await this.page.waitForSelector(`${modal} .jobs-easy-apply-content`, {
+          visible: true,
+        });
+      } catch (error) {
+        const modalSelector = await this.page.$(
+          ".artdeco-modal.artdeco-modal--layer-default"
+        );
+        if (modalSelector) {
+          await this.#onClick(
+            `.artdeco-modal.artdeco-modal--layer-default .jobs-s-apply .jobs-apply-button.artdeco-button.artdeco-button--primary`
+          );
+        }
+      }
       await new Promise((resolve) => setTimeout(resolve, 1000));
       await this.#nextFromStep();
 
@@ -209,14 +234,14 @@ class LinkedinJobSearcher {
 
       // Get the company name
       const companySelector = await this.page.$(
-        ".job-details-jobs-unified-top-card__primary-description-without-tagline .app-aware-link"
+        ".job-details-jobs-unified-top-card__container--two-pane .job-details-jobs-unified-top-card__company-name"
       );
       let companyName = null;
       // Sometimes it might not be possible to find the company name
       // then use the description instead of the company
       if (companySelector) {
         companyName = await this.page.evaluate(
-          (e) => e.textContent,
+          (e) => e.textContent.replace("\n", "").trim(),
           companySelector
         );
       } else {
