@@ -18,15 +18,15 @@ class LinkedinJobSearcher {
       "https://www.linkedin.com/jobs/search/?currentJobId=3917543403&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=React%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_KEYWORD_AUTOCOMPLETE&refresh=true&sortBy=DD",
       "https://www.linkedin.com/jobs/search/?currentJobId=3917578165&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Javascript%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
       "https://www.linkedin.com/jobs/search/?currentJobId=3919738664&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Javascript&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
-      "https://www.linkedin.com/jobs/search/?currentJobId=3918221427&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Frontend&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD"
-    ]
+      "https://www.linkedin.com/jobs/search/?currentJobId=3918221427&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Frontend&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
+    ];
     // Time to fill out the form
-    this.applyingTimeout = 1_000;
+    this.applyingTimeout = 10_000;
     this.screenshotCounter = 0;
   }
 
   async init() {
-    this.browser = await puppeteer.launch({ headless: true });
+    this.browser = await puppeteer.launch({ headless: false });
     this.page = (await this.browser.pages())[0];
     await this.page.setViewport({ width: 1000, height: 650 });
     await this.#run();
@@ -190,6 +190,7 @@ class LinkedinJobSearcher {
         continue;
       }
       await applyBtn.click();
+      console.log(description);
 
       // Go through the pre-filled form as much as possible
       const modal = ".jobs-easy-apply-modal";
@@ -214,7 +215,10 @@ class LinkedinJobSearcher {
         // Expect the form to be filled within applyingTimeout
         await this.page.waitForSelector(
           `.artdeco-modal.artdeco-modal--layer-default h2#post-apply-modal`,
-          { visible: true, timeout: this.applyingTimeout }
+          {
+            visible: true,
+            timeout: 500
+          }
         );
       } catch (error) {
         // If the form is not filled within the specified time, try to close it
@@ -273,6 +277,21 @@ class LinkedinJobSearcher {
       await this.#onClick(primaryButtonSelector);
     }
 
+    const vmlPrim = (await this.page.$$(`.artdeco-inline-feedback__message`))
+      .length;
+
+    if (vmlPrim > 4) {
+      return;
+    }
+
+    if (vmlPrim) {
+      await this.#signal();
+      await new Promise((resolve) =>
+        setTimeout(resolve, this.applyingTimeout * vmlPrim)
+      );
+      await this.#onClick(primaryButtonSelector);
+    }
+
     const validationMessage = await this.page.$(
       `.artdeco-inline-feedback__message`
     );
@@ -299,6 +318,21 @@ class LinkedinJobSearcher {
       await this.#scrollJobsList();
       await this.#findingSulitableVacancies();
     }
+  }
+
+  async #signal() {
+    await this.page.evaluate(async () => {
+      async function beep() {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        let osc = ctx.createOscillator();
+        osc.connect(ctx.destination);
+        osc.frequency.value = 900;
+        osc.type = "sine";
+        osc.start();
+        osc.stop(ctx.currentTime + 1);
+      }
+      beep();
+    });
   }
 }
 
