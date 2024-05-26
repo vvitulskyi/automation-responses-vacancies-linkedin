@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "dotenv": "^16.4.5",
+    "mongodb": "^6.6.2",
     "puppeteer": "^22.5.0"
   },
   "name": "automation-responses-vacancies-linkedin",

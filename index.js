@@ -2,42 +2,62 @@ require("dotenv").config();
 const puppeteer = require("puppeteer");
 const myKeyWords = require("./myKeyWords.js");
 const stopWordsInTitle = require("./stopWordsInTitle.js");
-const allowedStates = require("./allowedStates.js");
+// const allowedStates = require("./allowedStates.js");
+const { DB, CLIENT } = require("./db-client.js");
 
 class LinkedinJobSearcher {
   constructor() {
     this.browser = null;
     this.page = null;
-    this.success = [];
+    this.table = null;
     // Links to go to the search page
     this.searchUrls = [
       "https://www.linkedin.com/jobs/collections/easy-apply/?currentJobId=3828084624&discover=recommended&discoveryOrigin=JOBS_HOME_JYMBII",
       "https://www.linkedin.com/jobs/collections/recommended/?currentJobId=3918406757&discover=recommended&discoveryOrigin=JOBS_HOME_JYMBII",
       "https://www.linkedin.com/jobs/collections/top-applicant/?currentJobId=3921039339",
       "https://www.linkedin.com/jobs/search/?currentJobId=3917578165&distance=25&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Frontend%20Developer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3935268194&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Full-stack%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
       "https://www.linkedin.com/jobs/search/?currentJobId=3917543403&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=React%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_KEYWORD_AUTOCOMPLETE&refresh=true&sortBy=DD",
       "https://www.linkedin.com/jobs/search/?currentJobId=3917578165&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Javascript%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
       "https://www.linkedin.com/jobs/search/?currentJobId=3919738664&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Javascript&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
       "https://www.linkedin.com/jobs/search/?currentJobId=3918221427&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Frontend&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3885127146&f_AL=true&f_WT=2&geoId=92000000&keywords=Frontend%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3930467690&f_AL=true&f_WT=2&geoId=92000000&keywords=Front-end%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3930467690&f_AL=true&f_WT=2&geoId=92000000&keywords=Full-stack%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3932512710&f_AL=true&f_WT=2&geoId=92000000&keywords=React%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3932510776&f_AL=true&f_WT=2&geoId=92000000&keywords=Javascript%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3935425789&f_AL=true&f_WT=2&geoId=92000000&keywords=Frontend&location=Worldwide&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3935425789&f_AL=true&f_WT=2&geoId=92000000&keywords=Javascript&location=Worldwide&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
     ];
     // Time to fill out the form
     this.applyingTimeout = 10_000;
+    this.emptyFieldsLimit = 0;
+    this.headless = true;
     this.screenshotCounter = 0;
   }
 
   async init() {
-    this.browser = await puppeteer.launch({ headless: false });
+    this.#progress(`Ready Linkedin.com`);
+    await this.#startDB();
+    this.browser = await puppeteer.launch({ headless: this.headless });
     this.page = (await this.browser.pages())[0];
     await this.page.setViewport({ width: 1000, height: 650 });
     await this.#run();
+  }
+
+  async #startDB() {
+    try {
+      await CLIENT.connect();
+      this.table = DB.collection("submitted_applications");
+    } catch (err) {
+      console.log("Error connect", err);
+    }
   }
 
   async #run() {
     await this.#login();
     await this.#mapSearchUrls();
     await this.browser.close();
-    console.log(this.success);
-    console.log(this.success.length);
   }
 
   async #login() {
@@ -60,6 +80,12 @@ class LinkedinJobSearcher {
     }
   }
 
+  #progress(string) {
+    process.stdout.clearLine();
+    process.stdout.cursorTo(0);
+    process.stdout.write(string);
+  }
+
   async #onClick(selector) {
     try {
       await this.page.waitForSelector(selector);
@@ -69,7 +95,9 @@ class LinkedinJobSearcher {
         path: `screenshots-linkedin/onclick-error-${this.screenshotCounter}.png`,
       });
       console.log(
-        `Selector "${selector}" not found (${this.screenshotCounter})`
+        `Selector "${selector}" not found (${
+          this.screenshotCounter
+        }) ${this.page.url()}`
       );
       this.screenshotCounter = this.screenshotCounter + 1;
     }
@@ -137,6 +165,7 @@ class LinkedinJobSearcher {
         (e) => e.querySelector(".job-card-container__link strong").textContent,
         job
       );
+      this.#progress(`${this.page.url()}`);
       const keyWordIncludes = myKeyWords.some((r) =>
         title.toLowerCase().includes(r.toLowerCase())
       );
@@ -151,18 +180,27 @@ class LinkedinJobSearcher {
         continue;
       }
 
-      const description = await this.page.evaluate(
-        (e) => e.textContent.replace("\n", "").trim(),
-        await this.page.$(
-          ".job-details-jobs-unified-top-card__tertiary-description"
-        )
-      );
-      const allowedStatesIncludes = allowedStates.some((r) =>
-        description.toLowerCase().includes(r.toLowerCase())
-      );
-      if (!allowedStatesIncludes) {
-        continue;
+      let description = "";
+
+      try {
+        description = await this.page.evaluate(
+          (e) => e.textContent.replace("\n", "").trim(),
+          await this.page.$(
+            ".job-details-jobs-unified-top-card__tertiary-description"
+          )
+        );
+      } catch (error) {
+        this.page.screenshot({
+          path: `screenshots-linkedin/error-description-textContent.png`,
+        });
+        console.log(`Error on page ${this.page.url()}`);
       }
+      // const allowedStatesIncludes = allowedStates.some((r) =>
+      //   description.toLowerCase().includes(r.toLowerCase())
+      // );
+      // if (!allowedStatesIncludes) {
+      //   continue;
+      // }
 
       const successModal = await this.page.$(
         ".artdeco-modal.artdeco-modal--layer-default h2#post-apply-modal"
@@ -175,13 +213,32 @@ class LinkedinJobSearcher {
       // Click on the vacancy
       try {
         await job.click();
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (error) {
-        console.log(`Click error to job "${title}"`);
+        // console.log(`Click error to job "${this.page.url()}"`);
         // this.page.screenshot({ path: `screenshots-linkedin/job-click-error.png` });
         continue;
       }
       // Wait for it to load
       await this.page.waitForSelector(".jobs-details__main-content");
+      // Check error message
+      const applyBtnError = await this.page.$(
+        ".artdeco-inline-feedback--error"
+      );
+      if (applyBtnError) {
+        const isFinalError = await this.page.evaluate(
+          (e) =>
+            e
+              .querySelector(".artdeco-inline-feedback__message")
+              .textContent.replace("\n", "")
+              .trim(),
+          applyBtnError
+        );
+        if (isFinalError) {
+          await this.browser.close();
+        }
+        continue;
+      }
       // Skip if there is no button for simple submission in the description
       const applyBtn = await this.page.$(
         ".jobs-details__main-content .relative .jobs-apply-button"
@@ -189,8 +246,30 @@ class LinkedinJobSearcher {
       if (!applyBtn) {
         continue;
       }
+      // Set job link
+      let jobLink = "";
+      try {
+        jobLink = await this.page.evaluate(
+          (e) => e.querySelector(".job-card-container__link").href,
+          job
+        );
+      } catch (error) {
+        console.error(`Cannot to find jobLink`);
+      }
+      // Set company link
+      let companyLink = "";
+      try {
+        companyLink = await this.page.evaluate(
+          (e) => e.href,
+          await this.page.$(
+            ".job-details-jobs-unified-top-card__company-name .app-aware-link"
+          )
+        );
+      } catch (error) {
+        console.error(`Cannot to find jobLink`);
+      }
+
       await applyBtn.click();
-      console.log(description);
 
       // Go through the pre-filled form as much as possible
       const modal = ".jobs-easy-apply-modal";
@@ -212,12 +291,11 @@ class LinkedinJobSearcher {
       await this.#nextFromStep();
 
       try {
-        // Expect the form to be filled within applyingTimeout
         await this.page.waitForSelector(
           `.artdeco-modal.artdeco-modal--layer-default h2#post-apply-modal`,
           {
             visible: true,
-            timeout: 500
+            timeout: 2000,
           }
         );
       } catch (error) {
@@ -251,13 +329,16 @@ class LinkedinJobSearcher {
       } else {
         companyName = description;
       }
-      // Record the vacancy in the list of completed
-      this.success.push({
+      // Record the vacancy in the db table
+      this.table.insertOne({
         title,
         companyName,
         description,
+        jobLink,
+        companyLink,
+        date: new Date().toISOString(),
       });
-      console.log(this.success);
+
       // Close the modal
       await this.#onClick(
         `.artdeco-modal.artdeco-modal--layer-default .ember-view.artdeco-modal__dismiss`
@@ -280,12 +361,13 @@ class LinkedinJobSearcher {
     const vmlPrim = (await this.page.$$(`.artdeco-inline-feedback__message`))
       .length;
 
-    if (vmlPrim > 4) {
+    if (vmlPrim > this.emptyFieldsLimit) {
       return;
     }
 
     if (vmlPrim) {
       await this.#signal();
+      // Expect the form to be filled within applyingTimeout
       await new Promise((resolve) =>
         setTimeout(resolve, this.applyingTimeout * vmlPrim)
       );
