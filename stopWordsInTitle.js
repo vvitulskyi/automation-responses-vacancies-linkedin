@@ -1,5 +1,6 @@
 const stopWordsInTitle = [
-  "junior"
+  "junior",
+  "intern"
 ];
 
 module.exports = stopWordsInTitle;

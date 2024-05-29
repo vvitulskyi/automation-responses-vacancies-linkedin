@@ -2,7 +2,7 @@ require("dotenv").config();
 const puppeteer = require("puppeteer");
 const myKeyWords = require("./myKeyWords.js");
 const stopWordsInTitle = require("./stopWordsInTitle.js");
-// const allowedStates = require("./allowedStates.js");
+const tabooStates = require("./tabooStates.js");
 const { DB, CLIENT } = require("./db-client.js");
 
 class LinkedinJobSearcher {
@@ -13,21 +13,19 @@ class LinkedinJobSearcher {
     // Links to go to the search page
     this.searchUrls = [
       "https://www.linkedin.com/jobs/collections/easy-apply/?currentJobId=3828084624&discover=recommended&discoveryOrigin=JOBS_HOME_JYMBII",
-      "https://www.linkedin.com/jobs/collections/recommended/?currentJobId=3918406757&discover=recommended&discoveryOrigin=JOBS_HOME_JYMBII",
-      "https://www.linkedin.com/jobs/collections/top-applicant/?currentJobId=3921039339",
-      "https://www.linkedin.com/jobs/search/?currentJobId=3917578165&distance=25&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Frontend%20Developer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
-      "https://www.linkedin.com/jobs/search/?currentJobId=3935268194&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Full-stack%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
-      "https://www.linkedin.com/jobs/search/?currentJobId=3917543403&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=React%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_KEYWORD_AUTOCOMPLETE&refresh=true&sortBy=DD",
-      "https://www.linkedin.com/jobs/search/?currentJobId=3917578165&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Javascript%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
-      "https://www.linkedin.com/jobs/search/?currentJobId=3919738664&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Javascript&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
-      "https://www.linkedin.com/jobs/search/?currentJobId=3918221427&f_AL=true&f_JT=F%2CP%2CC&f_WT=2&geoId=105072130&keywords=Frontend&location=Poland&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
-      "https://www.linkedin.com/jobs/search/?currentJobId=3885127146&f_AL=true&f_WT=2&geoId=92000000&keywords=Frontend%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
-      "https://www.linkedin.com/jobs/search/?currentJobId=3930467690&f_AL=true&f_WT=2&geoId=92000000&keywords=Front-end%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
-      "https://www.linkedin.com/jobs/search/?currentJobId=3930467690&f_AL=true&f_WT=2&geoId=92000000&keywords=Full-stack%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
-      "https://www.linkedin.com/jobs/search/?currentJobId=3932512710&f_AL=true&f_WT=2&geoId=92000000&keywords=React%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
-      "https://www.linkedin.com/jobs/search/?currentJobId=3932510776&f_AL=true&f_WT=2&geoId=92000000&keywords=Javascript%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
-      "https://www.linkedin.com/jobs/search/?currentJobId=3935425789&f_AL=true&f_WT=2&geoId=92000000&keywords=Frontend&location=Worldwide&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
-      "https://www.linkedin.com/jobs/search/?currentJobId=3935425789&f_AL=true&f_WT=2&geoId=92000000&keywords=Javascript&location=Worldwide&origin=JOB_SEARCH_PAGE_SEARCH_BUTTON&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3933450368&distance=25&f_AL=true&f_JT=F%2CP%2CC&f_TPR=r604800&f_WT=2&geoId=105072130&keywords=Frontend%20Developer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3937355071&f_AL=true&f_JT=F%2CP%2CC&f_TPR=r604800&f_WT=2&geoId=105072130&keywords=Full-stack%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3936734936&f_AL=true&f_JT=F%2CP%2CC&f_TPR=r604800&f_WT=2&geoId=105072130&keywords=React%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3937355071&f_AL=true&f_JT=F%2CP%2CC&f_TPR=r604800&f_WT=2&geoId=105072130&keywords=Javascript%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3937355071&f_AL=true&f_JT=F%2CP%2CC&f_TPR=r604800&f_WT=2&geoId=105072130&keywords=Javascript&location=Poland&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3937355071&f_AL=true&f_JT=F%2CP%2CC&f_TPR=r604800&f_WT=2&geoId=105072130&keywords=Frontend&location=Poland&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3937355071&f_AL=true&f_TPR=r604800&f_WT=2&geoId=92000000&keywords=Frontend%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3937355071&f_AL=true&f_TPR=r604800&f_WT=2&geoId=92000000&keywords=Front-end%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3937355071&f_AL=true&f_TPR=r604800&f_WT=2&geoId=92000000&keywords=Full-stack%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3937308939&f_AL=true&f_TPR=r604800&f_WT=2&geoId=92000000&keywords=React%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3937355071&f_AL=true&f_TPR=r604800&f_WT=2&geoId=92000000&keywords=Javascript%20Developer&location=Worldwide&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3914251248&f_AL=true&f_TPR=r604800&f_WT=2&geoId=92000000&keywords=Frontend&location=Worldwide&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
+      "https://www.linkedin.com/jobs/search/?currentJobId=3937018421&f_AL=true&f_TPR=r604800&f_WT=2&geoId=92000000&keywords=Javascript&location=Worldwide&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
     ];
     // Time to fill out the form
     this.applyingTimeout = 10_000;
@@ -165,7 +163,7 @@ class LinkedinJobSearcher {
         (e) => e.querySelector(".job-card-container__link strong").textContent,
         job
       );
-      this.#progress(`${this.page.url()}`);
+      this.#progress(`${this.page.url()} `);
       const keyWordIncludes = myKeyWords.some((r) =>
         title.toLowerCase().includes(r.toLowerCase())
       );
@@ -195,13 +193,12 @@ class LinkedinJobSearcher {
         });
         console.log(`Error on page ${this.page.url()}`);
       }
-      // const allowedStatesIncludes = allowedStates.some((r) =>
-      //   description.toLowerCase().includes(r.toLowerCase())
-      // );
-      // if (!allowedStatesIncludes) {
-      //   continue;
-      // }
-
+      const tabooStatesIncludes = tabooStates.some((r) =>
+        description.toLowerCase().includes(r.toLowerCase())
+      );
+      if (tabooStatesIncludes) {
+        continue;
+      }
       const successModal = await this.page.$(
         ".artdeco-modal.artdeco-modal--layer-default h2#post-apply-modal"
       );
