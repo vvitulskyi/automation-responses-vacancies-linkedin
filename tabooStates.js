@@ -1,6 +1,6 @@
-const allowedStates = [
+const tabooStates = [
   "Russia",
   "Belarus"
 ];
 
-module.exports = allowedStates;
+module.exports = tabooStates;

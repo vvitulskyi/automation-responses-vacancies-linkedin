@@ -3,6 +3,7 @@ const puppeteer = require("puppeteer");
 const myKeyWords = require("./myKeyWords.js");
 const stopWordsInTitle = require("./stopWordsInTitle.js");
 const tabooStates = require("./tabooStates.js");
+const tabooCompanies = require("./tabooCompanies.js");
 const { DB, CLIENT } = require("./db-client.js");
 
 class LinkedinJobSearcher {
@@ -163,7 +164,6 @@ class LinkedinJobSearcher {
         (e) => e.querySelector(".job-card-container__link strong").textContent,
         job
       );
-      this.#progress(`${this.page.url()} `);
       const keyWordIncludes = myKeyWords.some((r) =>
         title.toLowerCase().includes(r.toLowerCase())
       );
@@ -184,7 +184,7 @@ class LinkedinJobSearcher {
         description = await this.page.evaluate(
           (e) => e.textContent.replace("\n", "").trim(),
           await this.page.$(
-            ".job-details-jobs-unified-top-card__tertiary-description"
+            ".job-details-jobs-unified-top-card__primary-description-container"
           )
         );
       } catch (error) {
@@ -199,6 +199,30 @@ class LinkedinJobSearcher {
       if (tabooStatesIncludes) {
         continue;
       }
+
+      // Get the company name
+      const companySelector = await this.page.$(
+        ".job-details-jobs-unified-top-card__container--two-pane .job-details-jobs-unified-top-card__company-name"
+      );
+      let companyName = null;
+      // Sometimes it might not be possible to find the company name
+      // then use the description instead of the company
+      if (companySelector) {
+        companyName = await this.page.evaluate(
+          (e) => e.textContent.replace("\n", "").trim(),
+          companySelector
+        );
+      } else {
+        companyName = description;
+      }
+
+      const tabooCompaniesIncludes = tabooCompanies.some((r) =>
+        companyName.toLowerCase().includes(r.toLowerCase())
+      );
+      if (tabooCompaniesIncludes) {
+        continue;
+      }
+
       const successModal = await this.page.$(
         ".artdeco-modal.artdeco-modal--layer-default h2#post-apply-modal"
       );
@@ -268,6 +292,8 @@ class LinkedinJobSearcher {
 
       await applyBtn.click();
 
+      this.#progress(`${this.page.url()} `);
+
       // Go through the pre-filled form as much as possible
       const modal = ".jobs-easy-apply-modal";
       try {
@@ -311,21 +337,6 @@ class LinkedinJobSearcher {
         continue;
       }
 
-      // Get the company name
-      const companySelector = await this.page.$(
-        ".job-details-jobs-unified-top-card__container--two-pane .job-details-jobs-unified-top-card__company-name"
-      );
-      let companyName = null;
-      // Sometimes it might not be possible to find the company name
-      // then use the description instead of the company
-      if (companySelector) {
-        companyName = await this.page.evaluate(
-          (e) => e.textContent.replace("\n", "").trim(),
-          companySelector
-        );
-      } else {
-        companyName = description;
-      }
       // Record the vacancy in the db table
       this.table.insertOne({
         title,
