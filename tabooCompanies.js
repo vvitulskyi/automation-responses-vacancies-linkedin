@@ -22,7 +22,8 @@ const tabooCompanies = [
   "Unreal Staffing, Inc",
   "Urban Linker",
   "Zero to One Search | Recruitment Agency",
-  "apreel"
+  "apreel",
+  "Programmers Force"
 ];
 
 module.exports = tabooCompanies;
