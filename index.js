@@ -267,7 +267,7 @@ class LinkedinJobSearcher {
       if (applyBtnError) {
         const isDisabled = await this.page.$eval(
           ".jobs-details__main-content .relative .jobs-apply-button",
-          (button) => button.disabled
+          (button) => (button && button.disabled) || null
         );
         if (isDisabled) {
           return;
