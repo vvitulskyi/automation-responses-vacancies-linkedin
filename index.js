@@ -14,6 +14,7 @@ class LinkedinJobSearcher {
     // Links to go to the search page
     this.searchUrls = [
       "https://www.linkedin.com/jobs/collections/easy-apply/?currentJobId=3828084624&discover=recommended&discoveryOrigin=JOBS_HOME_JYMBII",
+      "https://www.linkedin.com/jobs/collections/it-services-and-it-consulting/?currentJobId=3947939918&discover=recommended&discoveryOrigin=JOBS_HOME_JYMBII",
       "https://www.linkedin.com/jobs/search/?currentJobId=3933450368&f_AL=true&f_TPR=r604800&f_WT=2&geoId=105072130&keywords=Frontend%20Developer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
       "https://www.linkedin.com/jobs/search/?currentJobId=3937355071&f_AL=true&f_TPR=r604800&f_WT=2&geoId=105072130&keywords=Full-stack%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
       "https://www.linkedin.com/jobs/search/?currentJobId=3936734936&f_AL=true&f_TPR=r604800&f_WT=2&geoId=105072130&keywords=React%20Developer&location=Poland&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&sortBy=DD",
@@ -260,6 +261,15 @@ class LinkedinJobSearcher {
       }
       // Wait for it to load
       await this.page.waitForSelector(".jobs-details__main-content");
+
+      // Skip if there is no button for simple submission in the description
+      const applyBtn = await this.page.$(
+        ".jobs-details__main-content .relative .jobs-apply-button"
+      );
+      if (!applyBtn) {
+        continue;
+      }
+
       // Check error message
       const applyBtnError = await this.page.$(
         ".artdeco-inline-feedback--error"
@@ -274,13 +284,7 @@ class LinkedinJobSearcher {
         }
         continue;
       }
-      // Skip if there is no button for simple submission in the description
-      const applyBtn = await this.page.$(
-        ".jobs-details__main-content .relative .jobs-apply-button"
-      );
-      if (!applyBtn) {
-        continue;
-      }
+
       // Set job link
       let jobLink = "";
       try {
@@ -334,26 +338,31 @@ class LinkedinJobSearcher {
 
       await this.#nextFromStep();
 
-      try {
+      const formError = await this.page.$(
+        `.jobs-easy-apply-modal .artdeco-inline-feedback--error`
+      );
+
+      if (!formError) {
         await this.page.waitForSelector(
           `.artdeco-modal.artdeco-modal--layer-default h2#post-apply-modal`,
           {
             visible: true,
-            timeout: 2000,
+            timeout: 5000,
           }
         );
-      } catch (error) {
+
+        // Close the modal
+        await this.#onClick(
+          `.artdeco-modal.artdeco-modal--layer-default .ember-view.artdeco-modal__dismiss`
+        );
+      } else {
         // If the form is not filled within the specified time, try to close it
-        try {
-          await this.#onClick(
-            `.artdeco-modal.artdeco-modal--layer-default .ember-view.artdeco-modal__dismiss`
-          );
-          await this.#onClick(
-            `.artdeco-button--secondary.artdeco-modal__confirm-dialog-btn`
-          );
-        } catch (error) {
-          console.error("Error on close modal");
-        }
+        await this.#onClick(
+          `.artdeco-modal.artdeco-modal--layer-default .ember-view.artdeco-modal__dismiss`
+        );
+        await this.#onClick(
+          `.artdeco-button--secondary.artdeco-modal__confirm-dialog-btn`
+        );
         continue;
       }
 
@@ -366,18 +375,13 @@ class LinkedinJobSearcher {
         companyLink,
         date: new Date().toISOString(),
       });
-
-      // Close the modal
-      await this.#onClick(
-        `.artdeco-modal.artdeco-modal--layer-default .ember-view.artdeco-modal__dismiss`
-      );
     }
 
     await this.#paginationEnds();
   }
 
   async #nextFromStep() {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     const primaryButtonSelector = `.jobs-easy-apply-modal .jobs-easy-apply-content footer button.artdeco-button--primary`;
     const primaryButton = await this.page.$(primaryButtonSelector);
 
