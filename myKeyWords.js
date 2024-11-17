@@ -1,27 +1,22 @@
-const myKeyWords = [
-  "Front",
-  "FrontEnd",
-  "Front-end",
-  "Front End",
-  "JS",
-  "javascript",
-  "Full Stack",
-  "Full-Stack",
-  "FullStack",
-  "Nodejs",
-  "Node.js",
-  "React.js",
-  "Reactjs",
-  "React",
-  // "Angular",
-  // "Vue",
-  // "Vue.js",
-  "UI Developer",
-  // "TypeScript",
-  // "Type Script",
-  // "Type-Script",
-  // ".ts",
-  // "web"
+const permit = [
+  ["front", "frontend", "front-end", "front end"],
+  ["js", "javascript", "java script"],
+  ["react", "react js", "react.js", "reactjs"],
+  ["typescript", "type script", "type-script", ".ts"],
+  ["next.js", "next js", "nextjs"],
 ];
 
-module.exports = myKeyWords;
+const subPermit = [
+  ["html5", "html"],
+  ["css3", "css", "less", "scss"],
+  ["git"],
+  // ["full stack", "full-stack", "fullstack"],
+  // ["nodejs", "node.js", "node js"],
+  // ["express.js", "expressjs", "express js"],
+  // ["mongodb", "mongo db", "mongo", "mongo database"],
+  ["webpack", "webpackjs", "webpack js", "webpack.js"],
+  ["redux", "redux.js", "reduxjs", "redux js"],
+  ["product"],
+];
+
+module.exports = { permit, subPermit };
