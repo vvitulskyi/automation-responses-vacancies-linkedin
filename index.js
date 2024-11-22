@@ -458,11 +458,11 @@ Best regards, Viktor`),
         companyLink = await this.page.evaluate(
           (e) => e.href,
           await this.page.$(
-            ".job-details-jobs-unified-top-card__company-name .app-aware-link"
+            ".job-details-jobs-unified-top-card__company-name [data-test-app-aware-link]"
           )
         );
       } catch (error) {
-        console.error(`Cannot to find jobLink`);
+        console.error(`Cannot to find companyLink`);
       }
 
       // Set full description
