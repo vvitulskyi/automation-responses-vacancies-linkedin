@@ -236,9 +236,9 @@ Best regards, Viktor`),
   }
 
   async #scrollJobsList() {
-    await this.page.waitForSelector(`.jobs-search-results-list`);
+    await this.page.waitForSelector(`.scaffold-layout__list header+div`);
     await this.page.evaluate(async () => {
-      const element = document.querySelector(".jobs-search-results-list");
+      const element = document.querySelector(".scaffold-layout__list header+div");
       const countOfScroll = Math.ceil(element.scrollHeight / 20);
 
       if (element) {
@@ -255,7 +255,7 @@ Best regards, Viktor`),
 
     if (unloadedItem) {
       await this.page.evaluate(async () => {
-        const element = document.querySelector(".jobs-search-results-list");
+        const element = document.querySelector(".scaffold-layout__list header+div");
         if (element) {
           element.scrollTo(0, 0);
         }
