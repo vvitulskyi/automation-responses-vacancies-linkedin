@@ -330,7 +330,7 @@ Best regards, Viktor`),
     }
     // List of loaded vacancies
     const jobs = await this.page.$$(
-      ".scaffold-layout__list-container .ember-view.jobs-search-results__list-item:not(.jobs-search-results__job-card-search--generic-occludable-area)"
+      ".scaffold-layout__list header+div ul li.scaffold-layout__list-item:not(.jobs-search-results__job-card-search--generic-occludable-area)"
     );
 
     // Iterating through vacancies
@@ -356,6 +356,7 @@ Best regards, Viktor`),
         title.toLowerCase().includes(r.toLowerCase())
       );
       if (stopWordIncludes) {
+        // console.log('stopWordIncludes');
         continue;
       }
       // Click on the vacancy
@@ -400,7 +401,7 @@ Best regards, Viktor`),
           }
         }
         await this.page.waitForSelector(
-          ".jobs-description-content__text span",
+          ".jobs-box__html-content",
           {
             timeout: 10000,
           }
@@ -419,6 +420,7 @@ Best regards, Viktor`),
         description.toLowerCase().includes(r.toLowerCase())
       );
       if (tabooStatesIncludes) {
+        // console.log('tabooStatesIncludes');
         continue;
       }
 
@@ -428,6 +430,7 @@ Best regards, Viktor`),
         companyName.toLowerCase().includes(r.toLowerCase())
       );
       if (tabooCompaniesIncludes) {
+        // console.log('tabooCompaniesIncludes');
         continue;
       }
 
@@ -497,16 +500,21 @@ Best regards, Viktor`),
       }
 
       if (assignedGrade < this.minGrade) {
+        console.log(' not assignedGrade', assignedGrade)
         continue;
       }
 
       // await this.#sendMessage(jobLink);
 
       // Skip if it's not a simple application submission
-      const isEasyApply = await job.$$eval(
-        `.job-card-container__apply-method`,
-        (childs) => childs.length > 0
+      let isEasyApply = false;
+      const footerText = await this.page.evaluate(
+        (e) => e.textContent.toLowerCase(),
+        footerSelector
       );
+      if (footerText.includes("easy apply")) {
+        isEasyApply = true;
+      }
       if (!isEasyApply) {
         const newRow = {
           title,
@@ -545,13 +553,13 @@ Best regards, Viktor`),
           }
           continue;
         }
-        await applyBtn.click();
         if (this.modalHidden) {
           await this.page.evaluate(
             (e) => (e.style.display = "block"),
             await this.page.$("#artdeco-modal-outlet")
           );
         }
+        await applyBtn.click();
 
         await new Promise((resolve) => setTimeout(resolve, 500));
         const preApplyForm = await this.page.$(
@@ -565,7 +573,7 @@ Best regards, Viktor`),
         const modal = ".jobs-easy-apply-modal";
         try {
           await this.page.waitForSelector(
-            `${modal} .jobs-easy-apply-form-section__grouping`,
+            `${modal} .jobs-easy-apply-modal__content`,
             {
               visible: true,
               timeout: 5000,
@@ -577,6 +585,7 @@ Best regards, Viktor`),
             (e) => (e.style.display = "none"),
             await this.page.$("#artdeco-modal-outlet")
           );
+          this.modalHidden = true;
           continue;
           // const modalSelector = await this.page.$(
           //   ".artdeco-modal.artdeco-modal--layer-default"
@@ -654,7 +663,7 @@ Best regards, Viktor`),
 
   async #nextFromStep() {
     await new Promise((resolve) => setTimeout(resolve, 300));
-    const primaryButtonSelector = `.jobs-easy-apply-modal .jobs-easy-apply-content footer button.artdeco-button--primary`;
+    const primaryButtonSelector = `.jobs-easy-apply-modal footer button.artdeco-button--primary`;
     const primaryButton = await this.page.$(primaryButtonSelector);
 
     if (!primaryButton) {
